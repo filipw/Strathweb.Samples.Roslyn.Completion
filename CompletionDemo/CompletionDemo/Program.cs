@@ -22,14 +22,6 @@ namespace CompletionDemo
             //    "Microsoft.CodeAnalysis.CSharp.Features",
             //    "Microsoft.CodeAnalysis.VisualBasic.Features"
             // http://source.roslyn.io/#Microsoft.CodeAnalysis.Workspaces/Workspace/Host/Mef/MefHostServices.cs,126
-            var partTypes = MefHostServices.DefaultAssemblies
-                    .SelectMany(x => x.GetTypes())
-                    .ToArray();
-
-            var compositionContext = new ContainerConfiguration()
-                .WithParts(partTypes)
-                .CreateContainer();
-
             var host = MefHostServices.Create(MefHostServices.DefaultAssemblies);
             var workspace = new AdhocWorkspace(host);
 
@@ -53,21 +45,20 @@ namespace CompletionDemo
             Console.WriteLine();
             Console.WriteLine("*****");
             Console.WriteLine();
-            
-            // SCRIPT VERSION
 
+            // SCRIPT VERSION
             var scriptCode = "Guid.N";
 
             var compilationOptions = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,
                 usings: new[] { "System" });
-            var parseOptions = new CSharpParseOptions(LanguageVersion.Latest, DocumentationMode.Parse, SourceCodeKind.Script);
-            var scriptProjectInfo = ProjectInfo.Create(ProjectId.CreateNewId(), VersionStamp.Create(), "Script","Script", LanguageNames.CSharp,
-                    compilationOptions: compilationOptions, parseOptions: parseOptions, isSubmission: true)
-                .WithMetadataReferences(new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) });
+            var scriptProjectInfo = ProjectInfo.Create(ProjectId.CreateNewId(), VersionStamp.Create(), "Script", "Script", LanguageNames.CSharp,
+                    isSubmission: true)
+                .WithMetadataReferences(new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) })
+                .WithCompilationOptions(compilationOptions);
 
             var scriptProject = workspace.AddProject(scriptProjectInfo);
             var scriptDocumentInfo = DocumentInfo.Create(
-                DocumentId.CreateNewId(scriptProject.Id), Guid.NewGuid() + ".csx",
+                DocumentId.CreateNewId(scriptProject.Id), "Script",
                 sourceCodeKind: SourceCodeKind.Script,
                 loader: TextLoader.From(TextAndVersion.Create(SourceText.From(scriptCode), VersionStamp.Create())));
             var scriptDocument = workspace.AddDocument(scriptDocumentInfo);
@@ -82,7 +73,7 @@ namespace CompletionDemo
             var completionService = CompletionService.GetService(document);
             var results = await completionService.GetCompletionsAsync(document, position);
 
-            foreach (var i in results.Items.Where(x => !x.Tags.Contains("Keyword")))
+            foreach (var i in results.Items)
             {
                 Console.WriteLine(i.DisplayText);
 
